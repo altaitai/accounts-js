@@ -2,7 +2,7 @@ var express = require("express");
 var fs = require("fs");
 var crypto = require("crypto");
 
-// get cipher passphrase
+// get config file
 const config = JSON.parse(fs.readFileSync("accounts-config.js"));
 
 module.exports = {
@@ -88,8 +88,8 @@ module.exports = {
     const currentDate = new Date();
     const sessionDate = new Date(session.lastActive);
     const elapsed = currentDate - sessionDate;
-    // check if 10 minutes has elapsed since last activity
-    return elapsed.valueOf() > 600000;
+    // check if x minutes has elapsed since last activity (convert to milliseconds)
+    return elapsed.valueOf() > config.sessionTimeout*60000;
   },
 
   getUserDirectory(userId) {

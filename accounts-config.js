@@ -3,5 +3,6 @@
   "usersDir": "users/",
   "userIdPrefix": "user_",
   "usersFileName": "users",
-  "sessionsFileName": "sessions"
+  "sessionsFileName": "sessions",
+  "sessionTimeout": 10
 }
