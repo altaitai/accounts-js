@@ -1,6 +1,7 @@
 var express = require("express");
 var fs = require("fs");
 var crypto = require("crypto");
+const uuid = require("uuid/v1");
 
 // get config file
 const config = JSON.parse(fs.readFileSync("accounts-config.js"));
@@ -10,11 +11,11 @@ module.exports = {
     if (user.username && user.password) {
       this.getUsers((err, users) => {
         const username = user.username.trim().toLowerCase();
-        const encPassword = this.encryptString(user.password);
+        const encPassword = encryptString(user.password);
         for (var i = 0; i < users.length; i++) {
           if (users[i].username == username &&
               users[i].password == encPassword) {
-            return this.createSession(i, callback);
+            return this.createSession(users[i].id, callback);
           }
         }
       
@@ -28,6 +29,10 @@ module.exports = {
 
   createSession(userId, callback) {
     this.getSessions(userId, (err, sessions) => {
+      if (err) {
+        return callback(err, undefined);
+      }
+      
       // get current date
       const date = new Date();
       
@@ -35,10 +40,9 @@ module.exports = {
       if (sessions.length > 0) {
         if (sessions[sessions.length-1].active) {
           // check if session has timed out
-          if (this.sessionTimeout(sessions[sessions.length-1])) {
+          if (sessionTimeout(sessions[sessions.length-1])) {
             // set session to inactive
             sessions[sessions.length-1].active = false;
-            
           }
           else {
             // update lastActive field
@@ -52,7 +56,7 @@ module.exports = {
               else {
                 return callback(undefined, {
                   "newSession": false,
-                  "sessionId": sessions.length-1,
+                  "sessionId": sessions[sessions.length-1].id,
                   "userId": userId
                 });
               }
@@ -64,7 +68,7 @@ module.exports = {
       // add new session
       const newSession = {
         "active": true,
-        "id": sessions.length,
+        "id": uuid(),
         "created": date.toISOString(),
         "lastActive": date.toISOString()
       };
@@ -84,24 +88,17 @@ module.exports = {
     });
   },
   
-  sessionTimeout(session) {
-    const currentDate = new Date();
-    const sessionDate = new Date(session.lastActive);
-    const elapsed = currentDate - sessionDate;
-    // check if x minutes has elapsed since last activity (convert to milliseconds)
-    return elapsed.valueOf() > config.sessionTimeout*60000;
-  },
-  
   logout(userId, sessionId, callback) {
     this.getSessions(userId, (err, sessions) => {
       if (err) {
         return callback(err, undefined);
       }
       else {
-        if (sessions[sessionId]) {
+        var session = findById(sessionId, sessions);
+        if (session) {
           const date = new Date();
-          sessions[sessionId].lastActive = date.toISOString();
-          sessions[sessionId].active = false;
+          session.lastActive = date.toISOString();
+          session.active = false;
           this.saveSessions(userId, sessions, (err) => {
             if (err) {
               return callback(err, undefined);
@@ -126,16 +123,17 @@ module.exports = {
         return callback(err, undefined);
       }
       else {
-        if (sessions[sessionId]) {
-          if (sessions[sessionId].active) {
+        var session = findById(sessionId, sessions);
+        if (session) {
+          if (session.active) {
             const date = new Date();
-            sessions[sessionId].lastActive = date.toISOString();
+            session.lastActive = date.toISOString();
             this.saveSessions(userId, sessions, (err) => {
               if (err) {
                 return callback(err, undefined);
               }
               else {
-                return callback(undefined, sessions[sessionId]);
+                return callback(undefined, session);
               }
             });
           }
@@ -150,10 +148,6 @@ module.exports = {
     });
   },
 
-  getUserDirectory(userId) {
-    return config.usersDir + config.userIdPrefix + userId + "/";
-  },
-
   getSessions(userId, callback) {
     // check if user exists
     this.getUser(userId, (err, user) => {
@@ -161,7 +155,7 @@ module.exports = {
         return callback(err, undefined);
       }
       
-      const userDir = this.getUserDirectory(userId);
+      const userDir = getUserDirectory(userId);
       const sessionsFile = userDir + config.sessionsFileName + ".json";
       
       // create user directory if not created
@@ -191,8 +185,9 @@ module.exports = {
       if (err) {
         return callback(err, undefined);
       }
-      else if (sessions[sessionId]) {
-        return callback(undefined, sessions[sessionId]);
+      var session = findById(sessionId, sessions);
+      if (session) {
+        return callback(undefined, session);
       }
       else {
         return callback("Invalid session ID", undefined);
@@ -201,7 +196,7 @@ module.exports = {
   },
 
   saveSessions(userId, data, callback) {
-    fs.writeFile(this.getUserDirectory(userId) 
+    fs.writeFile(getUserDirectory(userId) 
                  + config.sessionsFileName + ".json", 
                  JSON.stringify(data),
                  callback);
@@ -215,11 +210,12 @@ module.exports = {
         user.email &&
         user.username &&
         user.password) {
+      newUser.id = uuid();
       newUser.firstName = user.firstName.trim();
       newUser.lastName = user.lastName.trim();
       newUser.email = user.email.trim().toLowerCase();
       newUser.username = user.username.trim().toLowerCase();
-      newUser.password = this.encryptString(user.password);
+      newUser.password = encryptString(user.password);
     }
     else {
       return callback("Invalid request", undefined);
@@ -281,8 +277,9 @@ module.exports = {
   
   getUser(userId, callback) {
     this.getUsers((err, users) => {
-      if (users[userId]) {
-        return callback(undefined, users[userId]);
+      var user = findById(userId, users);
+      if (user) {
+        return callback(undefined, user);
       }
       else {
         return callback("Invalid user ID", undefined);
@@ -294,20 +291,42 @@ module.exports = {
     fs.writeFile(config.usersDir + config.usersFileName + ".json", 
                  JSON.stringify(data),
                  callback);
-  },
-
-  encryptString(str) {
-    var key = crypto.createCipher("aes-128-cbc", config.passphrase);
-    var outStr = key.update(str, "utf8", "hex");
-    outStr += key.final("hex");
-    return outStr;
-  },
-
-  decryptString(str) {
-    var key = crypto.createDecipher("aes-128-cbc", config.passphrase);
-    var outStr = key.update(str, "hex", "utf8");
-    outStr += key.final("utf8");
-    return outStr;
   }
 };
 
+function sessionTimeout(session) {
+  const currentDate = new Date();
+  const sessionDate = new Date(session.lastActive);
+  const elapsed = currentDate - sessionDate;
+  // check if x minutes has elapsed since last activity (convert to milliseconds)
+  return elapsed.valueOf() > config.sessionTimeout*60000;
+}
+
+function encryptString(str) {
+  var key = crypto.createCipher("aes-128-cbc", config.passphrase);
+  var outStr = key.update(str, "utf8", "hex");
+  outStr += key.final("hex");
+  return outStr;
+}
+
+function decryptString(str) {
+  var key = crypto.createDecipher("aes-128-cbc", config.passphrase);
+  var outStr = key.update(str, "hex", "utf8");
+  outStr += key.final("utf8");
+  return outStr;
+}
+
+function getUserDirectory(userId) {
+  return config.usersDir + config.userIdPrefix + userId + "/";
+}
+
+function findById(id, array) {
+  if (array) {
+    for (var i = 0; i < array.length; i++) {
+      if (array[i].id == id) {
+        return array[i];
+      }
+    }
+  }
+  return undefined;
+}

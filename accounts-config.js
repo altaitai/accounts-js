@@ -1,7 +1,7 @@
 {
   "passphrase": "tPA9588X",
   "usersDir": "users/",
-  "userIdPrefix": "user_",
+  "userIdPrefix": "user-",
   "usersFileName": "users",
   "sessionsFileName": "sessions",
   "sessionTimeout": 10
