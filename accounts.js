@@ -107,7 +107,9 @@ module.exports = {
               return callback(err, undefined);
             }
             else {
-              return callback(undefined, "User logged out successfully");
+              return callback(undefined, {
+                "message": "User logged out successfully"
+              });
             }
           });
         }

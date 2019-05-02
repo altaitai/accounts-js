@@ -13,8 +13,11 @@ app.post("/login", function (req, res) {
 })
 
 app.post("/logout", function (req, res) {
-  util.logMessage("Logout user " + req.body.username);
-  accounts.logout(req, (err, data) => {
+  util.logMessage("Logout user " 
+                  + req.body.userId 
+                  + " session "
+                  + req.body.sessionId);
+  accounts.logout(req.body.userId, req.body.sessionId, (err, data) => {
     handleCallback(err, data, res);
   });
 })
