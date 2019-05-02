@@ -91,6 +91,62 @@ module.exports = {
     // check if x minutes has elapsed since last activity (convert to milliseconds)
     return elapsed.valueOf() > config.sessionTimeout*60000;
   },
+  
+  logout(userId, sessionId, callback) {
+    this.getSessions(userId, (err, sessions) => {
+      if (err) {
+        return callback(err, undefined);
+      }
+      else {
+        if (sessions[sessionId]) {
+          const date = new Date();
+          sessions[sessionId].lastActive = date.toISOString();
+          sessions[sessionId].active = false;
+          this.saveSessions(userId, sessions, (err) => {
+            if (err) {
+              return callback(err, undefined);
+            }
+            else {
+              return callback(undefined, "User logged out successfully");
+            }
+          });
+        }
+        else {
+          return callback("Invalid session ID", undefined);
+        }
+      }
+    });
+  },
+  
+  keepSessionAlive(userId, sessionId, callback) {
+    this.getSessions(userId, (err, sessions) => {
+      if (err) {
+        return callback(err, undefined);
+      }
+      else {
+        if (sessions[sessionId]) {
+          if (sessions[sessionId].active) {
+            const date = new Date();
+            sessions[sessionId].lastActive = date.toISOString();
+            this.saveSessions(userId, sessions, (err) => {
+              if (err) {
+                return callback(err, undefined);
+              }
+              else {
+                return callback(undefined, sessions[sessionId]);
+              }
+            });
+          }
+          else {
+            return callback("Session inactive", undefined);
+          }
+        }
+        else {
+          return callback("Invalid session ID", undefined);
+        }
+      }
+    });
+  },
 
   getUserDirectory(userId) {
     return config.usersDir + config.userIdPrefix + userId + "/";

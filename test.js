@@ -12,6 +12,13 @@ app.post("/login", function (req, res) {
   });
 })
 
+app.post("/logout", function (req, res) {
+  util.logMessage("Logout user " + req.body.username);
+  accounts.logout(req, (err, data) => {
+    handleCallback(err, data, res);
+  });
+})
+
 app.get("/users", function (req, res) {
   util.logMessage("Get users");
   accounts.getUsers((err, data) => {
@@ -44,6 +51,19 @@ app.get("/users/:userid/sessions/:sessionid",
   accounts.getSession(req.params.userid,
                       req.params.sessionid,
                       (err, data) => {
+    handleCallback(err, data, res);
+  });
+})
+
+app.post("/users/:userid/sessions/:sessionid", 
+        function (req, res) {
+  util.logMessage("Keepalive user " 
+                  + req.params.userid 
+                  + " session "
+                  + req.params.sessionid);
+  accounts.keepSessionAlive(req.params.userid,
+                            req.params.sessionid,
+                            (err, data) => {
     handleCallback(err, data, res);
   });
 })
