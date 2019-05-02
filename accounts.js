@@ -6,11 +6,11 @@ var crypto = require("crypto");
 const config = JSON.parse(fs.readFileSync("accounts-config.js"));
 
 module.exports = {
-  login(req, callback) {
-    if (req.body.username && req.body.password) {
+  login(user, callback) {
+    if (user.username && user.password) {
       this.getUsers((err, users) => {
-        const username = req.body.username.trim().toLowerCase();
-        const encPassword = this.encryptString(req.body.password);
+        const username = user.username.trim().toLowerCase();
+        const encPassword = this.encryptString(user.password);
         for (var i = 0; i < users.length; i++) {
           if (users[i].username == username &&
               users[i].password == encPassword) {
@@ -160,29 +160,29 @@ module.exports = {
       if (err) {
         return callback(err, undefined);
       }
-    });
-    
-    const userDir = this.getUserDirectory(userId);
-    const sessionsFile = userDir + config.sessionsFileName + ".json";
-    
-    // create user directory if not created
-    if (!fs.existsSync(userDir)) {
-      fs.mkdirSync(userDir);
-    }
-    
-    // return empty array if file does not exist
-    if (!fs.existsSync(sessionsFile)) {
-      return callback(undefined, []);
-    }
-    
-    // read users file
-    fs.readFile(sessionsFile, (err, data) => {
-      if (err) {
-        return callback(err, undefined);
+      
+      const userDir = this.getUserDirectory(userId);
+      const sessionsFile = userDir + config.sessionsFileName + ".json";
+      
+      // create user directory if not created
+      if (!fs.existsSync(userDir)) {
+        fs.mkdirSync(userDir);
       }
-      else {
-        return callback(undefined, JSON.parse(data));
+      
+      // return empty array if file does not exist
+      if (!fs.existsSync(sessionsFile)) {
+        return callback(undefined, []);
       }
+      
+      // read users file
+      fs.readFile(sessionsFile, (err, data) => {
+        if (err) {
+          return callback(err, undefined);
+        }
+        else {
+          return callback(undefined, JSON.parse(data));
+        }
+      });
     });
   },
   
@@ -207,19 +207,19 @@ module.exports = {
                  callback);
   },
 
-  createUser(req, callback) {
+  createUser(user, callback) {
     // validate request
     var newUser = {};
-    if (req.body.firstName &&
-        req.body.lastName &&
-        req.body.email &&
-        req.body.username &&
-        req.body.password) {
-      newUser.firstName = req.body.firstName.trim();
-      newUser.lastName = req.body.lastName.trim();
-      newUser.email = req.body.email.trim().toLowerCase();
-      newUser.username = req.body.username.trim().toLowerCase();
-      newUser.password = this.encryptString(req.body.password);
+    if (user.firstName &&
+        user.lastName &&
+        user.email &&
+        user.username &&
+        user.password) {
+      newUser.firstName = user.firstName.trim();
+      newUser.lastName = user.lastName.trim();
+      newUser.email = user.email.trim().toLowerCase();
+      newUser.username = user.username.trim().toLowerCase();
+      newUser.password = this.encryptString(user.password);
     }
     else {
       return callback("Invalid request", undefined);

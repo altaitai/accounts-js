@@ -7,7 +7,7 @@ app.use(express.json());
 
 app.post("/login", function (req, res) {
   util.logMessage("Login user " + req.body.username);
-  accounts.login(req, (err, data) => {
+  accounts.login(req.body, (err, data) => {
     handleCallback(err, data, res);
   });
 })
@@ -73,7 +73,7 @@ app.post("/users/:userid/sessions/:sessionid",
 
 app.post("/users", function (req, res) {
   util.logMessage("Create user " + req.body.username);
-  accounts.createUser(req, (err, data) => {
+  accounts.createUser(req.body, (err, data) => {
     handleCallback(err, data, res);
   });
 })
