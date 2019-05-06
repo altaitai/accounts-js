@@ -1,4 +1,3 @@
-var express = require("express");
 var fs = require("fs");
 var crypto = require("crypto");
 const uuid = require("uuid/v1");

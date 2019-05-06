@@ -81,7 +81,7 @@ app.post("/users", function (req, res) {
 handleCallback = function(err, data, res) {
   if (err) {
     util.logMessage("Error: " + err);
-    res.send({
+    res.status(400).send({
       "error": err
     });
   }
